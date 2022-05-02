@@ -10,10 +10,20 @@
 
 Adafruit_MPU6050 mpu;
 
+const int hall_pin = 5;
+
+int hall_sensor_input = 0;
+
+volatile byte half_revolutions;
+unsigned int rpm;
+unsigned long timeold;
+
 void setup() {
+  
   Serial.begin(115200);
-  // while (!Serial);
-  Serial.println("MPU6050 OLED demo");
+  attachInterrupt(hall_pin, magnet_detect, RISING);
+  
+//  pinMode(hall_pin, INPUT);
 
   if (!mpu.begin()) {
     Serial.println("Sensor init failed");
@@ -23,9 +33,21 @@ void setup() {
   Serial.println("Found a MPU-6050 sensor");
   }
 
+
+
 void loop() {
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
+
+  if (half_revolutions >= 20) {
+    rpm = 30*1000/(millis() - timeold)*half_revolutions;
+    timeold = millis();
+    half_revolutions = 0;
+  }
+
+//  hall_sensor_input = digitalRead(hall_pin);
+
+//  Serial.print(hall_sensor_input + "\n");
 
 //  Serial.print("Accelerometer ");
 //  Serial.print("X: ");
@@ -39,16 +61,16 @@ void loop() {
 //  Serial.println(" m/s^2");
 
   if (a.acceleration.x >= 3) {
-    Serial.print("forward\n");
+//    Serial.print("forward\n");
   }
   else if (a.acceleration.x <= -3) {
-    Serial.print("backward\n");
+//    Serial.print("backward\n");
   }
   else if (a.acceleration.y >= 3) {
-    Serial.print("left\n");
+//    Serial.print("left\n");
   }
   else if (a.acceleration.y <= -3) {
-    Serial.print("right\n");
+//    Serial.print("right\n");
   }
 
 //  Serial.print("Gyroscope ");
@@ -63,4 +85,9 @@ void loop() {
 //  Serial.println(" rps");
 
   delay(100);
+}
+
+void magnet_detect() {
+  half_revolutions++;
+  Serial.println("detect");
 }
