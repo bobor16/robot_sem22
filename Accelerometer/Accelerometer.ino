@@ -8,22 +8,38 @@
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_Sensor.h>
 
+#include <WiFi.h>
+#include <esp_now.h>
+
 Adafruit_MPU6050 mpu;
 
-const int hall_pin = 5;
+uint8_t broadcastAddress[] = {0x10, 0x97, 0xBD, 0xD4, 0x74, 0x50};
+esp_now_peer_info_t peerInfo;
+String success;
 
-int hall_sensor_input = 0;
+float outgoing_x;
+float outgoing_y;
 
-volatile byte half_revolutions;
-unsigned int rpm;
-unsigned long timeold;
+typedef struct struct_message {
+    float x;
+    float y;
+} struct_message;
+
+struct_message message;
+
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  if (status == 0) {
+    success = "Delivery Success :)";
+  }
+  else {
+    success = "Delivery Fail :(";
+  }
+}
 
 void setup() {
-  
   Serial.begin(115200);
-  attachInterrupt(hall_pin, magnet_detect, RISING);
-  
-//  pinMode(hall_pin, INPUT);
 
   if (!mpu.begin()) {
     Serial.println("Sensor init failed");
@@ -31,63 +47,58 @@ void setup() {
       yield();
   }
   Serial.println("Found a MPU-6050 sensor");
+  
+  WiFi.mode(WIFI_STA);
+  
+  
+  // Init ESP_NOW
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  } 
+  
+  /* Once ESP-NOW is successfully init, we will register for send cb to 
+     get the status of transmittet packets.
+  */
+  esp_now_register_send_cb(OnDataSent);
+
+  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+  peerInfo.channel = 0;  
+  peerInfo.encrypt = false;
+
+  // Add peer
+  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+    Serial.println("Failed to add peer");
+    return;
+    }
   }
 
-
-
-void loop() {
+/*
+  void readData() {
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
-  if (half_revolutions >= 20) {
-    rpm = 30*1000/(millis() - timeold)*half_revolutions;
-    timeold = millis();
-    half_revolutions = 0;
+  outgoing_x = a.acceleration.x;
+  outgoing_y = a.acceleration.y;
+    Serial.println(a.acceleration.x);
   }
+*/
+void loop() {
+//  readData();
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
 
-//  hall_sensor_input = digitalRead(hall_pin);
+  outgoing_x = a.acceleration.x;
+  outgoing_y = a.acceleration.y;
 
-//  Serial.print(hall_sensor_input + "\n");
+  Serial.println(message.x);
+  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &message, sizeof(message));
 
-//  Serial.print("Accelerometer ");
-//  Serial.print("X: ");
-//  Serial.print(a.acceleration.x, 1);
-//  Serial.print(" m/s^2, ");
-//  Serial.print("Y: ");
-//  Serial.print(a.acceleration.y, 1);
-//  Serial.print(" m/s^2, ");
-//  Serial.print("Z: ");
-//  Serial.print(a.acceleration.z, 1);
-//  Serial.println(" m/s^2");
-
-  if (a.acceleration.x >= 3) {
-//    Serial.print("forward\n");
+  if (result == ESP_OK) {
+    Serial.println("Sent with success");
   }
-  else if (a.acceleration.x <= -3) {
-//    Serial.print("backward\n");
+  else {
+    Serial.println("Error sending the data");
   }
-  else if (a.acceleration.y >= 3) {
-//    Serial.print("left\n");
-  }
-  else if (a.acceleration.y <= -3) {
-//    Serial.print("right\n");
-  }
-
-//  Serial.print("Gyroscope ");
-//  Serial.print("X: ");
-//  Serial.print(g.gyro.x, 1);
-//  Serial.print(" rps, ");
-//  Serial.print("Y: ");
-//  Serial.print(g.gyro.y, 1);
-//  Serial.print(" rps, ");
-//  Serial.print("Z: ");
-//  Serial.print(g.gyro.z, 1);
-//  Serial.println(" rps");
-
   delay(100);
-}
-
-void magnet_detect() {
-  half_revolutions++;
-  Serial.println("detect");
 }
