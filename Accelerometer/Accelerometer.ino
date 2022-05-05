@@ -1,9 +1,3 @@
-// Basic OLED demo for accelerometer readings from Adafruit MPU6050
-
-// ESP32 Guide: https://RandomNerdTutorials.com/esp32-mpu-6050-accelerometer-gyroscope-arduino/
-// ESP8266 Guide: https://RandomNerdTutorials.com/esp8266-nodemcu-mpu-6050-accelerometer-gyroscope-arduino/
-// Arduino Guide: https://RandomNerdTutorials.com/arduino-mpu-6050-accelerometer-gyroscope/
-
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_Sensor.h>
@@ -73,25 +67,15 @@ void setup() {
     }
   }
 
-/*
-  void readData() {
-  sensors_event_t a, g, temp;
-  mpu.getEvent(&a, &g, &temp);
-
-  outgoing_x = a.acceleration.x;
-  outgoing_y = a.acceleration.y;
-    Serial.println(a.acceleration.x);
-  }
-*/
 void loop() {
-//  readData();
+
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
-  outgoing_x = a.acceleration.x;
-  outgoing_y = a.acceleration.y;
+  message.x = a.acceleration.x;
+  message.y = a.acceleration.y;
 
-  Serial.println(message.x);
+  Serial.println(a.acceleration.x);
   esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &message, sizeof(message));
 
   if (result == ESP_OK) {
