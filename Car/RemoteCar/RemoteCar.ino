@@ -60,8 +60,8 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   Serial.println("x: " + incoming_x);
-  Serial.print();
-  Serial.println("y: " + incoming_y);
+//  Serial.print();
+//  Serial.println("y: " + incoming_y);
   delay(100);
   
 }
