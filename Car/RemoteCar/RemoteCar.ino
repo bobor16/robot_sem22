@@ -14,6 +14,10 @@ int motor2pin2 = 19;
 int enable_pin_a = 4;
 int enable_pin_b = 5;
 
+// ultrasonic distance sensor
+const int trigger_pin = 23;
+const int echo_pin = 22;
+
 // instansiate mac address of the controller
 uint8_t broadcastAddress[] = {0x24, 0x0A, 0xC4, 0xD6, 0xC5, 0xE4};
 
@@ -53,7 +57,12 @@ void setup() {
   pinMode(motor2pin2, OUTPUT);
   pinMode(enable_pin_a, OUTPUT);
   pinMode(enable_pin_b, OUTPUT);
-  
+
+  // set trigger pin as output
+  pinMode(trigger_pin, OUTPUT);
+
+  // set echo pin as input
+  pinMode(echo_pin, INPUT);
 
     // Init ESP-NOW
   if (esp_now_init() != ESP_OK) {
@@ -81,15 +90,30 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  Serial.println("x: ");
-  Serial.println(incoming_x);
-  Serial.println("y: ");
-  Serial.println(incoming_y);
+//  Serial.println("x: ");
+//  Serial.println(incoming_x);
+//  Serial.println("y: ");
+//  Serial.println(incoming_y);
 //  Serial.println("y: " + incoming_y);
-  delay(100);
+//  delay(100);
 
-  analogWrite(enable_pin_a, 200);
-  analogWrite(enable_pin_b, 200);
+  unsigned long pulseLength;
+  unsigned int centimeters;
+
+  digitalWrite(trigger_pin, LOW);
+  delayMicroseconds(5);
+  digitalWrite(trigger_pin, HIGH);
+  delayMicroseconds(10);
+
+  pulseLength = pulseIn(echo_pin, HIGH);
+
+  centimeters = pulseLength / 58;
+
+  Serial.println("cm: ");
+  Serial.println(centimeters);
+  
+  analogWrite(enable_pin_a, 255);
+  analogWrite(enable_pin_b, 245);
 
   if (incoming_x > -3 && incoming_x < 4 && incoming_y > -3 && incoming_y < 4) {
     analogWrite(enable_pin_a, 0);
