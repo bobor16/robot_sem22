@@ -4,6 +4,7 @@
 
 #include <WiFi.h>
 #include <esp_now.h>
+#include <analogWrite.h>
 
 Adafruit_MPU6050 mpu;
 
@@ -34,6 +35,23 @@ struct_distance incoming_distance;
 
 struct_message message;
 
+// ** PID ** 
+// constants
+double kp = 2;
+double ki = 5;
+double kd = 1;
+int speed; // variable for the distance measurement
+unsigned long currentTime, previousTime;
+double elapsedTime;
+double error;
+double lastError;
+double input;
+double output;
+double SetPoint;
+double cumError;
+ double rateError;
+// ** PID ** 
+
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Serial.print("\r\nLast Packet Send Status:\t");
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
@@ -55,6 +73,7 @@ void OnDataRecv(const uint8_t * mac, const uint8_t * incomingData, int len) {
 }
 
 void setup() {
+  SetPoint = 0;                    //PID:set point at zero degrees
   Serial.begin(115200);
 
   pinMode(rotor_pin, OUTPUT);
@@ -106,12 +125,6 @@ void loop() {
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
 
-  if (incoming_cm < 15) {
-    analogWrite(rotor_pin, 255);
-  }else {
-    analogWrite(rotor_pin, 0);
-  }
-
   message.x = a.acceleration.x;
   message.y = a.acceleration.y;
 
@@ -124,5 +137,55 @@ void loop() {
   else {
     Serial.println("Error sending the data");
   }
+  // ** PID ** 
+          input = analogRead(A0);                //read from rotary encoder connected to A0
+        output = computePID(input);
+        delay(500);
+
+        if(incoming_cm>100){
+        speed = 0;
+        }
+        if(incoming_cm<14){
+        speed = 40;
+        }
+        if(incoming_cm<12){
+        speed = 70;
+        }
+        if(incoming_cm<10){
+        speed = 80;
+        }
+        if(incoming_cm<8){
+        speed = 120;
+        }
+        if(incoming_cm<6){
+        speed = 190;
+        }
+        if(incoming_cm<3){
+        speed = 250;
+        }
+        if(incoming_cm>500){
+        speed = 250;
+        }
+
+
+        Serial.println("SPEED");
+        Serial.println(speed);
+        analogWrite(0, speed);                //control the motor based on PID value
+        // ** PID ** 
   delay(100);
+}
+double computePID(double inp){     
+        currentTime = millis();                //get current time
+        elapsedTime = (double)(currentTime - previousTime);        //compute time elapsed from previous computation
+        
+        error = SetPoint - inp;                                // determine error
+        cumError += error * elapsedTime;                // compute integral
+        rateError = (error - lastError)/elapsedTime;   // compute derivative
+ 
+        double out = kp*error + ki*cumError + kd*rateError;                //PID output               
+ 
+        lastError = error;                                //remember current error
+        previousTime = currentTime;                        //remember current time
+ 
+        return out;                                        //have function return the PID output
 }
