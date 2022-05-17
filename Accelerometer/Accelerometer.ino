@@ -84,5 +84,5 @@ void loop() {
   else {
     Serial.println("Error sending the data");
   }
-  delay(1000);
+  delay(100);
 }
