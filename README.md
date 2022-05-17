@@ -42,10 +42,4 @@ To be added.
 
 Distributed under the MIT License. See `LICENSE.txt` for more information.
 
-<!-- CONTACT -->
 
-## Contact
-
-Martin Lykke - martin@wirksomhed.dk
-
-Project Link: [https://github.com/MartinLykke/Programming-of-Robots-SDU](https://github.com/MartinLykke/Programming-of-Robots-SDU)
