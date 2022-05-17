@@ -19,10 +19,24 @@ const int trigger_pin = 23;
 const int echo_pin = 22;
 
 // instansiate mac address of the controller
-uint8_t broadcastAddress[] = {0x24, 0x0A, 0xC4, 0xD6, 0xC5, 0xE4};
+ uint8_t broadcastAddress[] = {0x24, 0x0A, 0xC4, 0xD6, 0xC5, 0xE4};
+// uint8_t broadcastAddress[] = {0x10, 0x97, 0xBD, 0xD5, 0x3C, 0x34};
+
 
 float incoming_x;
 float incoming_y;
+
+String success;
+
+typedef struct struct_distance {
+  int cm;
+} struct_distance;
+
+typedef struct struct_message_tank {
+  float waterDist;
+} struct_message_tank;
+
+struct_message_tank tankReadings;
 
 typedef struct struct_message {
     float x;
@@ -33,7 +47,20 @@ struct_message message;
 
 struct_message incomingMessage;
 
+struct_distance distance_to_controller;
+
 esp_now_peer_info_t peerInfo;
+
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  if (status == 0) {
+    success = "Delivery Success";
+  }
+  else {
+    success = "Delivery Fail :(";
+  }
+}
 
 // Callback when data is received
 void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
@@ -43,6 +70,8 @@ void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
  
   incoming_x = message.x;
   incoming_y = message.y;
+
+  
 }
 
 void setup() {
@@ -69,8 +98,13 @@ void setup() {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
+
+    /* Once ESP-NOW is successfully init, we will register for send cb to 
+     get the status of transmittet packets.
+  */
+  esp_now_register_send_cb(OnDataSent);
   
-  Serial.println("Mac address for the wrom wroom: " + WiFi.macAddress());
+  //Serial.println("Mac address for the wrom wroom: " + WiFi.macAddress());
 
   memcpy(peerInfo.peer_addr, broadcastAddress, 6);
   peerInfo.channel = 0;  
@@ -109,6 +143,22 @@ void loop() {
 
   centimeters = pulseLength / 58;
 
+  distance_to_controller.cm = centimeters;
+
+  // tankReadings.waterDist = centimeters;
+
+//  delay(10000);
+
+//  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &tankReadings, sizeof(tankReadings));
+  esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &distance_to_controller, sizeof(distance_to_controller));
+
+  if (result == ESP_OK) {
+    Serial.println("Sent with success");
+  }
+  else {
+    Serial.println("Error sending the data");
+  }
+  delay(100);
   Serial.println("cm: ");
   Serial.println(centimeters);
   
