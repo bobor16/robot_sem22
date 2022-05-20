@@ -141,7 +141,7 @@ void loop() {
 
   pulseLength = pulseIn(echo_pin, HIGH);
 
-  centimeters = pulseLength / 58;
+  centimeters = pulseLength / 58; // multiplying with 58 is the same as multiplaying with speed of sound (0.034) and dividing by 2; 
 
   distance_to_controller.cm = centimeters;
 
